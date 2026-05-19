@@ -1,0 +1,51 @@
+version: '3.9'
+
+# ─── AlphaWeek Local Development Stack ───────────────────────────────────────
+#
+# Provides only the infrastructure services you can't run in-process:
+#   • Redis     — job queue (BullMQ) + Telegram token cache
+#   • RedisInsight — browser UI for Redis inspection (localhost:5540)
+#
+# NOT included (use cloud equivalents locally):
+#   • PostgreSQL — use your Neon dev branch (DATABASE_URL in .env)
+#   • The backend / frontend apps — run them with npm run dev
+#
+# Usage:
+#   docker compose -f docker-compose.dev.yml up -d
+#   docker compose -f docker-compose.dev.yml down
+#
+# Redis connection (no password in dev for simplicity):
+#   REDIS_URL=redis://localhost:6379
+
+services:
+  redis:
+    image: redis:7-alpine
+    container_name: alphaweek_redis_dev
+    restart: unless-stopped
+    ports:
+      - '6379:6379'
+    command: redis-server --save 60 1 --loglevel warning
+    volumes:
+      - redis_dev_data:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis-ui:
+    image: redislabs/redisinsight:latest
+    container_name: alphaweek_redis_ui
+    restart: unless-stopped
+    ports:
+      - '5540:5540'
+    depends_on:
+      redis:
+        condition: service_healthy
+    # RedisInsight stores its own config in /db — persist across restarts
+    volumes:
+      - redisinsight_data:/db
+
+volumes:
+  redis_dev_data:
+  redisinsight_data:

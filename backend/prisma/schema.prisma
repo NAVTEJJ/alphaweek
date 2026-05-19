@@ -1,0 +1,245 @@
+// AlphaWeek — Prisma Schema
+// Database: Neon PostgreSQL (serverless)
+// Generated client: @prisma/client
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["driverAdapters"]
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DATABASE_URL_UNPOOLED")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Enums
+// ─────────────────────────────────────────────────────────────────────────────
+
+enum Plan {
+  free
+  starter
+  pro
+  elite
+  whitelabel
+}
+
+enum SubscriptionStatus {
+  active
+  trialing
+  past_due
+  canceled
+  unpaid
+  paused
+}
+
+enum BriefStatus {
+  pending
+  generating
+  completed
+  failed
+}
+
+enum BriefType {
+  weekly
+  daily
+}
+
+enum AlertType {
+  brief_failed
+  geopolitical
+  rebalancing
+  system
+  price_alert
+}
+
+enum PriceAlertDirection {
+  above
+  below
+}
+
+enum Exchange {
+  NASDAQ
+  NYSE
+  NSE
+  BSE
+  CRYPTO
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// User
+// ─────────────────────────────────────────────────────────────────────────────
+
+model User {
+  id                  String   @id // Clerk user ID (sub claim in JWT)
+  email               String   @unique
+  name                String?
+  stripeCustomerId    String?  @unique @map("stripe_customer_id")
+  plan                Plan     @default(free)
+  telegramChatId      String?  @map("telegram_chat_id")
+  referralCode        String   @unique @map("referral_code")
+  referredBy          String?  @map("referred_by")
+  referralRewardGiven Boolean  @default(false) @map("referral_reward_given")
+  createdAt           DateTime @default(now()) @map("created_at")
+  updatedAt           DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  portfolio    Portfolio?
+  watchlist    Watchlist?
+  briefs       Brief[]
+  subscription Subscription?
+  alerts       Alert[]
+  priceAlerts  PriceAlert[]
+  apiKeys      ApiKey[]
+
+  @@map("users")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Portfolio
+// ─────────────────────────────────────────────────────────────────────────────
+
+model Portfolio {
+  id        String   @id @default(cuid())
+  userId    String   @unique @map("user_id")
+  holdings  Json     @default("[]") // PortfolioHolding[]
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("portfolios")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Watchlist
+// ─────────────────────────────────────────────────────────────────────────────
+
+model Watchlist {
+  id        String   @id @default(cuid())
+  userId    String   @unique @map("user_id")
+  tickers   String[] @default([])
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("watchlists")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Brief
+// ─────────────────────────────────────────────────────────────────────────────
+
+model Brief {
+  id               String      @id @default(cuid())
+  userId           String      @map("user_id")
+  content          String?     @db.Text
+  pdfUrl           String?     @map("pdf_url")
+  weekOf           DateTime    @map("week_of") @db.Date
+  briefType        BriefType   @default(weekly) @map("brief_type")
+  planAtGeneration Plan        @default(free) @map("plan_at_generation")
+  status           BriefStatus @default(pending)
+  aiTokensUsed     Int?        @map("ai_tokens_used")
+  errorMessage     String?     @map("error_message")
+  generatedAt      DateTime?   @map("generated_at")
+  failedAt         DateTime?   @map("failed_at")
+  createdAt        DateTime    @default(now()) @map("created_at")
+  mood             String?     @map("mood")
+  moodReason       String?     @map("mood_reason")
+  briefSummary     String?     @map("brief_summary") @db.Text
+  closingQuestion  String?     @map("closing_question") @db.Text
+  publicSlug       String?     @unique @map("public_slug")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([weekOf])
+  @@index([status])
+  @@index([userId, weekOf])
+  @@map("briefs")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Subscription
+// ─────────────────────────────────────────────────────────────────────────────
+
+model Subscription {
+  id          String             @id @default(cuid())
+  userId      String             @unique @map("user_id")
+  stripeSubId String             @unique @map("stripe_sub_id")
+  plan        Plan
+  status      SubscriptionStatus
+  trialEndsAt DateTime?          @map("trial_ends_at")
+  renewedAt   DateTime?          @map("renewed_at")
+  canceledAt  DateTime?          @map("canceled_at")
+  createdAt   DateTime           @default(now()) @map("created_at")
+  updatedAt   DateTime           @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([stripeSubId])
+  @@map("subscriptions")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Alert
+// ─────────────────────────────────────────────────────────────────────────────
+
+model Alert {
+  id        String    @id @default(cuid())
+  userId    String    @map("user_id")
+  type      AlertType
+  message   String
+  sentAt    DateTime? @map("sent_at")
+  readAt    DateTime? @map("read_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([userId, readAt])
+  @@map("alerts")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PriceAlert
+// ─────────────────────────────────────────────────────────────────────────────
+
+model PriceAlert {
+  id          String              @id @default(cuid())
+  userId      String              @map("user_id")
+  ticker      String
+  exchange    Exchange
+  targetPrice Float               @map("target_price")
+  direction   PriceAlertDirection
+  triggered   Boolean             @default(false)
+  triggeredAt DateTime?           @map("triggered_at")
+  createdAt   DateTime            @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([triggered])
+  @@index([userId, triggered]) // price alert checker queries by userId + triggered=false
+  @@map("price_alerts")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ApiKey (WhiteLabel plan)
+// ─────────────────────────────────────────────────────────────────────────────
+
+model ApiKey {
+  id         String    @id @default(cuid())
+  userId     String    @map("user_id")
+  name       String
+  keyHash    String    @unique @map("key_hash")
+  prefix     String
+  lastUsedAt DateTime? @map("last_used_at")
+  createdAt  DateTime  @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([keyHash])
+  @@map("api_keys")
+}

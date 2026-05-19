@@ -1,0 +1,36 @@
+# Dependencies
+node_modules/
+
+# Environment variables — never commit
+.env
+.env.local
+.env.*.local
+.env.production
+.env.development
+
+# Build outputs
+dist/
+.next/
+out/
+
+# Logs
+*.log
+logs/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/settings.json
+.idea/
+
+# TypeScript
+*.tsbuildinfo
+
+# Internal scripts
+scripts/generate-brief.ts
+
+# Dev utility scripts
+backend/scripts/generate-brief.ts
+backend/schema_init.sql

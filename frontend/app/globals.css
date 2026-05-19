@@ -1,0 +1,53 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --font-inter: 'Inter', system-ui, sans-serif;
+    --font-calistoga: 'Calistoga', Georgia, serif;
+    --font-jetbrains: 'JetBrains Mono', Menlo, monospace;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-surface-2 text-slate-100 font-body antialiased;
+  }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { @apply bg-surface-2; }
+  ::-webkit-scrollbar-thumb { @apply bg-border rounded-full; }
+  ::-webkit-scrollbar-thumb:hover { @apply bg-border-light; }
+
+  /* Keyboard-only focus ring — browser defaults are nearly invisible on the
+     dark theme. Skips mouse clicks (focus-visible) so it never looks "stuck". */
+  a:focus-visible,
+  button:focus-visible,
+  [role="button"]:focus-visible,
+  input:focus-visible,
+  textarea:focus-visible,
+  select:focus-visible,
+  summary:focus-visible {
+    outline: 2px solid theme('colors.primary.light');
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+}
+
+@layer components {
+  .stat-up { @apply text-profit font-mono; }
+  .stat-down { @apply text-loss font-mono; }
+  .stat-neutral { @apply text-muted font-mono; }
+
+  .glass-card {
+    @apply bg-surface/60 backdrop-blur-sm border border-border rounded-xl;
+  }
+
+  .data-label {
+    @apply text-xs text-muted uppercase tracking-wider font-mono;
+  }
+}
